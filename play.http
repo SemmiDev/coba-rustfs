@@ -1,0 +1,41 @@
+### Global Variables
+@baseUrl = http://localhost:8080
+@fileId = 9a4e4e1e-629d-4bf9-aa19-6111b8110c92
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### List Files
+GET {{baseUrl}}/api/files?limit=10&offset=0
+Accept: application/json
+
+### Upload File
+POST {{baseUrl}}/api/files
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello RustFS! This is a test file.
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Test file upload via REST Client
+--WebAppBoundary--
+
+### Get File Metadata
+GET {{baseUrl}}/api/files/{{fileId}}
+Accept: application/json
+
+### Download File
+GET {{baseUrl}}/api/files/{{fileId}}/download
+
+### Get Presigned URL
+GET {{baseUrl}}/api/files/{{fileId}}/presigned-url?expiry=3600
+Accept: application/json
+
+### Delete File
+DELETE {{baseUrl}}/api/files/{{fileId}}
+Accept: application/json

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RustFS File Manager - Demo Application</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 2px dashed #667eea;
+        }
+
+        .upload-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input[type="file"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input[type="file"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .files-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .file-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .file-description {
+            font-size: 0.9em;
+            color: #777;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #218838;
+        }
+
+        .btn-share {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-share:hover {
+            background: #138496;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination span {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 RustFS File Manager</h1>
+            <p>High-Performance Object Storage Demo - Powered by Golang & RustFS</p>
+        </div>
+
+        <div class="content">
+            <div id="alert-container"></div>
+
+            <div class="upload-section">
+                <h2>📤 Upload File</h2>
+                <form id="upload-form">
+                    <div class="form-group">
+                        <label for="file-input">Pilih File (Max 100MB)</label>
+                        <input type="file" id="file-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description-input">Deskripsi (Opsional)</label>
+                        <textarea id="description-input" placeholder="Masukkan deskripsi file..."></textarea>
+                    </div>
+                    <button type="submit" class="btn" id="upload-btn">Upload File</button>
+                </form>
+            </div>
+
+            <div class="files-section">
+                <h2>📁 Daftar File</h2>
+                <div id="files-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Memuat file...</p>
+                    </div>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="share-modal">
+        <div class="modal-content">
+            <h3>🔗 Share URL</h3>
+            <p>URL ini akan valid selama 1 jam:</p>
+            <input type="text" id="share-url" readonly>
+            <div class="modal-actions">
+                <button class="btn-small btn-download" onclick="copyShareURL()">Copy URL</button>
+                <button class="btn-small btn-delete" onclick="closeShareModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentPage = 1;
+        const limit = 9;
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        async function uploadFile(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('file-input');
+            const descriptionInput = document.getElementById('description-input');
+            const uploadBtn = document.getElementById('upload-btn');
+
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('description', descriptionInput.value);
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Mengupload...';
+
+            try {
+                const response = await fetch(`${API_BASE}/files`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('File berhasil diupload!', 'success');
+                    fileInput.value = '';
+                    descriptionInput.value = '';
+                    await loadFiles();
+                } else {
+                    showAlert(data.message || 'Gagal upload file', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload File';
+            }
+        }
+
+        async function loadFiles(page = 1) {
+            const container = document.getElementById('files-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat file...</p></div>';
+
+            try {
+                const offset = (page - 1) * limit;
+                const response = await fetch(`${API_BASE}/files?limit=${limit}&offset=${offset}`);
+                const result = await response.json();
+
+                if (result.data && result.data.length > 0) {
+                    renderFiles(result.data);
+                    renderPagination(result.pagination);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Belum ada file yang diupload</p></div>';
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">Error loading files: ${error.message}</div>`;
+            }
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById('files-container');
+            const grid = document.createElement('div');
+            grid.className = 'files-grid';
+
+            files.forEach(file => {
+                const card = document.createElement('div');
+                card.className = 'file-card';
+
+                const uploadDate = new Date(file.uploaded_at).toLocaleString('id-ID');
+                const fileSize = formatBytes(file.size);
+
+                card.innerHTML = `
+                    <div class="file-name">${file.filename}</div>
+                    <div class="file-info">📦 ${fileSize}</div>
+                    <div class="file-info">📅 ${uploadDate}</div>
+                    ${file.description ? `<div class="file-description">${file.description}</div>` : ''}
+                    <div class="file-actions">
+                        <button class="btn-small btn-download" onclick="downloadFile('${file.id}', '${file.filename}')">
+                            Download
+                        </button>
+                        <button class="btn-small btn-share" onclick="shareFile('${file.id}')">
+                            Share
+                        </button>
+                        <button class="btn-small btn-delete" onclick="deleteFile('${file.id}')">
+                            Hapus
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(grid);
+        }
+
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination');
+            if (!pagination || pagination.total_pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const { current_page, total_pages } = pagination;
+
+            container.innerHTML = `
+                <button ${current_page === 1 ? 'disabled' : ''} onclick="loadFiles(${current_page - 1})">
+                    ← Previous
+                </button>
+                <span>Page ${current_page} of ${total_pages}</span>
+                <button ${current_page === total_pages ? 'disabled' : ''} onclick="loadFiles(${current_page + 1})">
+                    Next →
+                </button>
+            `;
+        }
+
+        async function downloadFile(id, filename) {
+            try {
+                const response = await fetch(`${API_BASE}/files/${id}/download`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                showAlert('File berhasil didownload!', 'success');
+            } catch (error) {
+                showAlert('Error downloading file: ' + error.message, 'error');
+            }
+        }
+
+        async function shareFile(id) {
+            try {
+                const response = await fetch(`${API_BASE}/files/${id}/presigned-url`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('share-url').value = data.url;
+                    document.getElementById('share-modal').classList.add('active');
+                } else {
+                    showAlert('Gagal generate share URL', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function copyShareURL() {
+            const input = document.getElementById('share-url');
+            input.select();
+            document.execCommand('copy');
+            showAlert('URL berhasil dicopy!', 'success');
+        }
+
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.remove('active');
+        }
+
+        async function deleteFile(id) {
+            if (!confirm('Apakah Anda yakin ingin menghapus file ini?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/files/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('File berhasil dihapus!', 'success');
+                    await loadFiles(currentPage);
+                } else {
+                    showAlert(data.message || 'Gagal menghapus file', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', uploadFile);
+        document.getElementById('share-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'share-modal') closeShareModal();
+        });
+
+        loadFiles();
+    </script>
+</body>
+</html>

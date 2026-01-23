@@ -1,0 +1,100 @@
+services:
+  # RustFS Object Storage Server (S3-compatible)
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs-server
+    ports:
+      - "9000:9000"  # API endpoint
+      - "9001:9001"  # Web console
+    environment:
+      - RUSTFS_ROOT_USER=rustfsadmin
+      - RUSTFS_ROOT_PASSWORD=rustfsadmin
+    volumes:
+      - rustfs-data:/data
+      - rustfs-logs:/logs
+    networks:
+      - rustfs-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # PostgreSQL Database untuk menyimpan metadata file
+  postgres:
+    image: postgres:15-alpine
+    container_name: rustfs-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=rustfsuser
+      - POSTGRES_PASSWORD=rustfspass
+      - POSTGRES_DB=rustfsdb
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Init script untuk membuat table
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rustfs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rustfsuser -d rustfsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Golang Application Server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rustfs-golang-app
+    ports:
+      - "8080:8080"
+    environment:
+      # RustFS Configuration
+      - RUSTFS_ENDPOINT=http://rustfs:9000
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_BUCKET=demo-bucket
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_USE_SSL=false
+
+      # Database Configuration
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=rustfsuser
+      - DB_PASSWORD=rustfspass
+      - DB_NAME=rustfsdb
+      - DB_SSLMODE=disable
+
+      # Application Configuration
+      - APP_PORT=8080
+      - APP_ENV=development
+      - LOG_LEVEL=info
+    depends_on:
+      rustfs:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - rustfs-network
+    restart: unless-stopped
+    # Volume untuk development (optional, comment jika tidak diperlukan)
+    # volumes:
+    #   - ./cmd:/app/cmd
+    #   - ./internal:/app/internal
+
+networks:
+  rustfs-network:
+    driver: bridge
+
+volumes:
+  rustfs-data:
+    driver: local
+  rustfs-logs:
+    driver: local
+  postgres-data:
+    driver: local
